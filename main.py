@@ -2,6 +2,7 @@ import os
 from docx import Document
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from PIL import Image
 import tkinter as tk
 from tkinter import filedialog
@@ -9,19 +10,68 @@ from tkinter import filedialog
 output_file_path = "C:/Users/josta/Downloads/out.pdf"
 pdf = None
 
+
 def add_text_to_pdf(pdf, document):
     text_y_position = 750  # Starting Y position on the page
+    font_size = 12  # Default font size
+    line_spacing = 14  # Line spacing between paragraphs
+
+    page_width, page_height = A4
 
     for para in document.paragraphs:
-        text = para.text
+        if text_y_position < 50:  # Start a new page if we're too far down
+            pdf.showPage()
+            text_y_position = 750  # Reset position for new page
 
-        if text:  # Only render non-empty paragraphs
-            pdf.drawString(100, text_y_position, text)  # Draw the paragraph text
-            text_y_position -= 20  # Move to the next line
+        # Check if the paragraph is a heading (you can modify this as needed)
+        if para.style.name.startswith('Heading'):
+            font_size = 16  # Increase font size for headings
+            pdf.setFont("Helvetica-Bold", font_size)
+        else:
+            font_size = 12  # Normal font size for body text
+            pdf.setFont("Helvetica", font_size)
 
-            if text_y_position < 50:  # Start a new page if we're too far down
-                pdf.showPage()
-                text_y_position = 750  # Reset position for new page
+        # Determine alignment safely (None means default to left alignment)
+        try:
+            alignment = para.alignment
+        except ValueError:
+            alignment = None  # Handle invalid alignment gracefully
+        if alignment == 1:  # Center alignment
+            text_x_position = page_width / 2  # Center horizontally
+            draw_function = pdf.drawCentredString
+        elif alignment == 2:  # Right alignment (if needed)
+            text_x_position = page_width - 100
+            draw_function = pdf.drawRightString
+        else:  # Default to left alignment
+            text_x_position = 100
+            draw_function = pdf.drawString
+
+        # Loop through runs within the paragraph to handle formatting
+        for run in para.runs:
+            text = run.text
+
+            # Apply formatting for bold and italic
+            if run.bold:
+                pdf.setFont("Helvetica-Bold", font_size)
+            elif run.italic:
+                pdf.setFont("Helvetica-Oblique", font_size)
+            else:
+                pdf.setFont("Helvetica", font_size)
+
+            # Draw the text using the appropriate draw function (center, right, or left)
+            draw_function(text_x_position, text_y_position, text)
+
+            # Adjust position if there are multiple runs in the paragraph
+            if alignment != 1:  # For non-centered text, increment x position
+                text_x_position += pdf.stringWidth(text, "Helvetica", font_size)
+
+        # Move to the next line after the paragraph
+        text_y_position -= line_spacing
+
+        # Start a new page if we're too far down
+        if text_y_position < 50:
+            pdf.showPage()
+            text_y_position = 750
 
 
 def select_input_file():
