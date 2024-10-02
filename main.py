@@ -1,5 +1,6 @@
 import os
 import threading
+import re
 from docx import Document
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import inch
@@ -153,22 +154,34 @@ def process_images():
     # Let user select the main folder
     folder_path = filedialog.askdirectory()
     if not folder_path:
-        print("No folder selected!")
         loading_label.config(text="No folder selected!")
         return
 
     print(f"Selected folder: {folder_path}")
 
+    # Get the subfolders and sort them by the number they start with
+    subfolders = [f for f in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, f))]
+
+    # Sort subfolders by the number at the beginning of the folder name
+    def extract_number(folder_name):
+        match = re.match(r"(\d+)", folder_name)
+        return int(match.group(0)) if match else float('inf')  # Sort non-matching folders last
+    def extract_folder_free_text(folder_name):
+        match = re.match(r"\d+ (.+)", folder_name)
+        return match.group(1) if match else ""
+
+
+    sorted_subfolders = sorted(subfolders, key=extract_number)
+
     # Loop through subfolders in the selected folder
-    for subfolder_name in os.listdir(folder_path):
+    for subfolder_name in sorted_subfolders:
         subfolder_path = os.path.join(folder_path, subfolder_name)
 
-        if os.path.isdir(subfolder_path):  # Only process directories
+        if os.path.isdir(subfolder_path):
             pdf.showPage()  # Page break for each new subfolder
 
-            # Draw the folder name in the PDF
             pdf.setFont("Helvetica-Bold", 14)
-            pdf.drawString(100, 800, f"{subfolder_name}")
+            pdf.drawString(100, 800, f"{extract_folder_free_text(subfolder_name)}")
 
             image_files = [f for f in os.listdir(subfolder_path)
                            if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.heic'))]
@@ -183,7 +196,6 @@ def process_images():
                 paste_images_to_pdf_4x4(image_files, subfolder_path, num_of_images)
             elif num_of_images == 1:
                 paste_images_to_pdf_1pic(image_files, subfolder_path)
-
 
     # Hide the loading label when the process is done
     loading_label.config(text="Images processed successfully!")
