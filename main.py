@@ -12,18 +12,22 @@ from tkinter import filedialog
 
 output_file_path = "C:/Users/josta/Downloads/out.pdf"
 pdf = None
+header_image_path = "CM_logo.png"
 
-
-def add_text_to_pdf(pdf, document):
+def add_text_to_pdf(document):
+    global pdf
     text_y_position = 750  # Starting Y position on the page
     font_size = 12  # Default font size
     line_spacing = 14  # Line spacing between paragraphs
+
+    add_header_footer(pdf, header_image_path)
 
     page_width, page_height = A4
 
     for para in document.paragraphs:
         if text_y_position < 50:  # Start a new page if we're too far down
             pdf.showPage()
+            add_header_footer(pdf, header_image_path)
             text_y_position = 750  # Reset position for new page
 
         # Check if the paragraph is a heading (you can modify this as needed)
@@ -74,6 +78,7 @@ def add_text_to_pdf(pdf, document):
         # Start a new page if we're too far down
         if text_y_position < 50:
             pdf.showPage()
+            add_header_footer(pdf, header_image_path)
             text_y_position = 750
 
 
@@ -84,10 +89,11 @@ def select_input_file():
     print(f"Selected file: {file_path}")
     document = Document(file_path)
     pdf = canvas.Canvas(output_file_path, pagesize=A4)
-    add_text_to_pdf(pdf, document)
+    add_text_to_pdf(document)
 
 
 def paste_images_to_pdf_4x4(image_files, subfolder_path, num_of_images):
+    global pdf
     image_count = 0
     positions = [(100, 480), (350, 480), (100, 160), (350, 160)]  # Positions for up to 4 images
 
@@ -119,6 +125,7 @@ def paste_images_to_pdf_4x4(image_files, subfolder_path, num_of_images):
         # After 4 images, add a new page
         if image_count % 4 == 0 and image_count != num_of_images:
             pdf.showPage()
+            add_header_footer(pdf, header_image_path)
 
 
 def paste_images_to_pdf_1pic(image_files, subfolder_path):
@@ -148,10 +155,27 @@ def paste_images_to_pdf_1pic(image_files, subfolder_path):
             continue
 
 
+def add_header_footer(pdf, header_image_path):
+    page_width, page_height = A4
+
+    # Header:
+    try:
+        header_image_width = 110
+        header_image_height = 36
+        pdf.drawImage(header_image_path, 70, page_height - 64,
+                      width=header_image_width, height=header_image_height)
+    except Exception as e:
+        print(f"Error loading header image: {e}")
+
+    # Footer:
+    pdf.setFont("Helvetica", 10)
+    pdf.drawCentredString(page_width / 2.0, 0.5 * inch, f"Page")
+
+
 def process_images():
     global pdf
 
-    # Let user select the main folder
+    # Select the main folder
     folder_path = filedialog.askdirectory()
     if not folder_path:
         loading_label.config(text="No folder selected!")
@@ -159,7 +183,6 @@ def process_images():
 
     print(f"Selected folder: {folder_path}")
 
-    # Get the subfolders and sort them by the number they start with
     subfolders = [f for f in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, f))]
 
     # Sort subfolders by the number at the beginning of the folder name
@@ -180,8 +203,10 @@ def process_images():
         if os.path.isdir(subfolder_path):
             pdf.showPage()  # Page break for each new subfolder
 
+            add_header_footer(pdf, header_image_path)
+
             pdf.setFont("Helvetica-Bold", 14)
-            pdf.drawString(100, 800, f"{extract_folder_free_text(subfolder_name)}")
+            pdf.drawString(100, 740, f"{extract_folder_free_text(subfolder_name)}")
 
             image_files = [f for f in os.listdir(subfolder_path)
                            if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.heic'))]
