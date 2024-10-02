@@ -3,16 +3,27 @@ import threading
 import re
 from docx import Document
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase import pdfmetrics
 from PIL import Image
 import tkinter as tk
 from tkinter import filedialog
 
-output_file_path = "C:/Users/josta/Downloads/out.pdf"
+output_file_name = "pretenzija.pdf"
+output_file_path = f"C:/Users/josta/Downloads/{output_file_name}"
 pdf = None
 header_image_path = "CM_logo.png"
+page_bottom_limit = 100
+
+
+def register_fonts():
+    pdfmetrics.registerFont(TTFont('Arial', 'Arial-Unicode-Regular.ttf'))
+    pdfmetrics.registerFont(TTFont('Arial-Bold', 'Arial-Unicode-Bold.ttf'))
+    pdfmetrics.registerFont(TTFont('Arial-Bold-Italic', 'Arial-Unicode-Bold-Italic.ttf'))
+    pdfmetrics.registerFont(TTFont('Arial-Italic', 'Arial-Unicode-Italic.ttf'))
+
 
 def add_text_to_pdf(document):
     global pdf
@@ -20,23 +31,23 @@ def add_text_to_pdf(document):
     font_size = 12  # Default font size
     line_spacing = 14  # Line spacing between paragraphs
 
-    add_header_footer(pdf, header_image_path)
+    add_header_footer()
 
     page_width, page_height = A4
 
     for para in document.paragraphs:
-        if text_y_position < 50:  # Start a new page if we're too far down
+        if text_y_position < page_bottom_limit:  # Start a new page if we're too far down
             pdf.showPage()
-            add_header_footer(pdf, header_image_path)
+            add_header_footer()
             text_y_position = 750  # Reset position for new page
 
         # Check if the paragraph is a heading (you can modify this as needed)
         if para.style.name.startswith('Heading'):
             font_size = 16  # Increase font size for headings
-            pdf.setFont("Helvetica-Bold", font_size)
+            pdf.setFont("Arial", font_size)
         else:
             font_size = 12  # Normal font size for body text
-            pdf.setFont("Helvetica", font_size)
+            pdf.setFont("Arial", font_size)
 
         # Determine alignment safely (None means default to left alignment)
         try:
@@ -59,26 +70,26 @@ def add_text_to_pdf(document):
 
             # Apply formatting for bold and italic
             if run.bold:
-                pdf.setFont("Helvetica-Bold", font_size)
+                pdf.setFont("Arial-Bold", font_size)
             elif run.italic:
-                pdf.setFont("Helvetica-Oblique", font_size)
+                pdf.setFont("Arial-Italic", font_size)
             else:
-                pdf.setFont("Helvetica", font_size)
+                pdf.setFont("Arial", font_size)
 
             # Draw the text using the appropriate draw function (center, right, or left)
             draw_function(text_x_position, text_y_position, text)
 
             # Adjust position if there are multiple runs in the paragraph
             if alignment != 1:  # For non-centered text, increment x position
-                text_x_position += pdf.stringWidth(text, "Helvetica", font_size)
+                text_x_position += pdf.stringWidth(text, "Arial", font_size)
 
         # Move to the next line after the paragraph
         text_y_position -= line_spacing
 
         # Start a new page if we're too far down
-        if text_y_position < 50:
+        if text_y_position < page_bottom_limit:
             pdf.showPage()
-            add_header_footer(pdf, header_image_path)
+            add_header_footer()
             text_y_position = 750
 
 
@@ -105,8 +116,8 @@ def paste_images_to_pdf_4x4(image_files, subfolder_path, num_of_images):
                 img = img.convert("RGB")
                 img_width, img_height = img.size
 
-                max_width = 3 * inch
-                max_height = 4 * inch
+                max_width = 216
+                max_height = 288
                 ratio = min(max_width / img_width, max_height / img_height)
                 new_size = (int(img_width * ratio), int(img_height * ratio))
 
@@ -125,7 +136,7 @@ def paste_images_to_pdf_4x4(image_files, subfolder_path, num_of_images):
         # After 4 images, add a new page
         if image_count % 4 == 0 and image_count != num_of_images:
             pdf.showPage()
-            add_header_footer(pdf, header_image_path)
+            add_header_footer()
 
 
 def paste_images_to_pdf_1pic(image_files, subfolder_path):
@@ -139,8 +150,8 @@ def paste_images_to_pdf_1pic(image_files, subfolder_path):
                 img = img.convert("RGB")
                 img_width, img_height = img.size
 
-                max_width = 6 * inch
-                max_height = 8 * inch
+                max_width = 400
+                max_height = 560
                 ratio = min(max_width / img_width, max_height / img_height)
                 new_size = (int(img_width * ratio), int(img_height * ratio))
 
@@ -155,7 +166,9 @@ def paste_images_to_pdf_1pic(image_files, subfolder_path):
             continue
 
 
-def add_header_footer(pdf, header_image_path):
+def add_header_footer():
+    global pdf
+    global header_image_path
     page_width, page_height = A4
 
     # Header:
@@ -168,8 +181,32 @@ def add_header_footer(pdf, header_image_path):
         print(f"Error loading header image: {e}")
 
     # Footer:
-    pdf.setFont("Helvetica", 10)
-    pdf.drawCentredString(page_width / 2.0, 0.5 * inch, f"Page")
+    footer_text_column_1 = [
+        "UAB „Claims management“",
+        "Įm. k. 305594385 ",
+        "Kauno g. 16-308, LT-03212 Vilnius, Lietuva"
+    ]
+
+    footer_text_column_2 = [
+        "Tel.nr.: +370 6 877 63 30",
+        "El. p.: paulius@claimsmanagement.lt",
+        "www.claimsmanagement.lt"
+    ]
+
+    pdf.setFont("Arial", 10)
+
+    x_col1 = 80
+    y_start = 50
+    line_height = 15
+
+    for i, text in enumerate(footer_text_column_1):
+        y_position = y_start + i * line_height
+        pdf.drawString(x_col1, y_position, text)
+
+    x_col2 = 360
+    for i, text in enumerate(footer_text_column_2):
+        y_position = y_start + i * line_height
+        pdf.drawString(x_col2, y_position, text)
 
 
 def process_images():
@@ -203,9 +240,9 @@ def process_images():
         if os.path.isdir(subfolder_path):
             pdf.showPage()  # Page break for each new subfolder
 
-            add_header_footer(pdf, header_image_path)
+            add_header_footer()
 
-            pdf.setFont("Helvetica-Bold", 14)
+            pdf.setFont("Arial-Bold", 14)
             pdf.drawString(100, 740, f"{extract_folder_free_text(subfolder_name)}")
 
             image_files = [f for f in os.listdir(subfolder_path)
@@ -238,7 +275,7 @@ def select_image_folder():
 def select_output_folder():
     global output_file_path
     folder_path = filedialog.askdirectory()
-    output_file_path = f"{folder_path}/out.pdf"
+    output_file_path = f"{folder_path}/{output_file_name}"
     print(f"Selected output folder: {output_file_path}")
 
 
@@ -255,6 +292,8 @@ def save_pdf():
 if __name__ == '__main__':
     root = tk.Tk()
     root.title("CM PDF Converter")
+
+    register_fonts()
 
     btn_select_output_folder = tk.Button(root, text="Select PDF output folder", command=select_output_folder)
     btn_select_docx = tk.Button(root, text="Select Word Document", command=lambda: select_input_file())
