@@ -98,7 +98,15 @@ def select_input_file():
     global pdf
     global output_file_path
     file_path = filedialog.askopenfilename()
-    print(f"Selected file: {file_path}")
+
+    if not file_path:
+        docx_file_label.config(text=f"Error opening file {file_path}")
+        loading_label.update_idletasks()
+        return
+
+    docx_file_label.config(text="Word document selected")
+    loading_label.update_idletasks()
+
     document = Document(file_path)
     pdf = canvas.Canvas(output_file_path, pagesize=A4)
     add_text_to_pdf(document)
@@ -250,8 +258,6 @@ def process_images():
         loading_label.config(text="No folder selected!")
         return
 
-    print(f"Selected folder: {folder_path}")
-
     subfolders = [f for f in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, f))]
 
     # Sort subfolders by the number at the beginning of the folder name
@@ -280,9 +286,6 @@ def process_images():
             image_files = [f for f in os.listdir(subfolder_path)
                            if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.heic', '.pdf'))]
 
-            print(image_files)
-            print("-------------------")
-
             # Extract images from PDFs if any
             for image_file in image_files:
                 if image_file.lower().endswith('.pdf'):
@@ -292,8 +295,6 @@ def process_images():
 
                 # Remove the pdf files from the list after extracting images
             image_files = [f for f in image_files if not f.lower().endswith('.pdf')]
-
-            print(image_files)
 
             if not image_files:
                 print(f"No images found in folder: {subfolder_name}")
@@ -306,7 +307,8 @@ def process_images():
             elif num_of_images == 1:
                 paste_images_to_pdf_1pic(image_files, subfolder_path)
 
-    # Hide the loading label when the process is done
+    btn_generate_pdf.pack(pady=0)
+    save_status_label.pack(pady=2)
     loading_label.config(text="Images processed successfully!")
     loading_label.update_idletasks()
 
@@ -322,18 +324,25 @@ def select_image_folder():
 def select_output_folder():
     global output_file_path
     folder_path = filedialog.askdirectory()
-    output_file_path = f"{folder_path}/{output_file_name}"
-    print(f"Selected output folder: {output_file_path}")
+
+    if folder_path:
+        output_file_path = f"{folder_path}/{output_file_name}"
+        output_folder_label.config(text=f"Output folder selected: {folder_path}")
+        loading_label.update_idletasks()
+    else:
+        output_folder_label.config(text="Error selecting output folder")
+        loading_label.update_idletasks()
 
 
 def save_pdf():
     global pdf
     if pdf:
         pdf.save()
-        print("PDF saved!")
+        save_status_label.config(text="PDF saved")
+        loading_label.update_idletasks()
     else:
-        print("No PDF to save.")
-
+        save_status_label.config(text="Error saving PDF")
+        loading_label.update_idletasks()
 
 
 if __name__ == '__main__':
@@ -347,13 +356,18 @@ if __name__ == '__main__':
     btn_select_image_folder = tk.Button(root, text="Select Image Folder", command=select_image_folder)
     btn_generate_pdf = tk.Button(root, text="Generate PDF", command=save_pdf)
 
-    btn_select_output_folder.pack(pady=10)
-    btn_select_docx.pack(pady=10)
-    btn_select_image_folder.pack(pady=10)
-
+    output_folder_label = tk.Label(root, text="")
+    docx_file_label = tk.Label(root, text="")
     loading_label = tk.Label(root, text="")
-    loading_label.pack(pady=10)
+    save_status_label = tk.Label(root, text="")
 
-    btn_generate_pdf.pack(pady=10)
+    btn_select_output_folder.pack(pady=10)
+    output_folder_label.pack(pady=0)
+    btn_select_docx.pack(pady=10)
+    docx_file_label.pack(pady=2)
+    btn_select_image_folder.pack(pady=10)
+    loading_label.pack(pady=2)
+    btn_generate_pdf.forget()
+    save_status_label.forget()
 
     root.mainloop()
