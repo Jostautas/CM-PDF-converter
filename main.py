@@ -86,7 +86,7 @@ def select_input_file():
     add_text_to_pdf(pdf, document)
 
 
-def paste_images_to_pdf_4x4(image_files, subfolder_path):
+def paste_images_to_pdf_4x4(image_files, subfolder_path, num_of_images):
     image_count = 0
     positions = [(100, 480), (350, 480), (100, 160), (350, 160)]  # Positions for up to 4 images
 
@@ -116,7 +116,7 @@ def paste_images_to_pdf_4x4(image_files, subfolder_path):
         image_count += 1
 
         # After 4 images, add a new page
-        if image_count % 4 == 0:
+        if image_count % 4 == 0 and image_count != num_of_images:
             pdf.showPage()
 
 
@@ -145,8 +145,6 @@ def paste_images_to_pdf_1pic(image_files, subfolder_path):
         except Exception as e:
             print(f"Error processing image {image_file}: {e}")
             continue
-
-        pdf.showPage()
 
 
 def process_images():
@@ -182,7 +180,7 @@ def process_images():
             num_of_images = len(image_files)
 
             if num_of_images > 1:
-                paste_images_to_pdf_4x4(image_files, subfolder_path)
+                paste_images_to_pdf_4x4(image_files, subfolder_path, num_of_images)
             elif num_of_images == 1:
                 paste_images_to_pdf_1pic(image_files, subfolder_path)
 
