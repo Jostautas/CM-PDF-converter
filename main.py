@@ -10,6 +10,7 @@ from reportlab.pdfbase import pdfmetrics
 from PIL import Image
 import tkinter as tk
 from tkinter import filedialog
+import fitz
 
 output_file_name = "pretenzija.pdf"
 output_file_path = f"C:/Users/josta/Downloads/{output_file_name}"
@@ -103,10 +104,53 @@ def select_input_file():
     add_text_to_pdf(document)
 
 
+def add_header_footer():
+    global pdf
+    global header_image_path
+    page_width, page_height = A4
+
+    # Header:
+    try:
+        header_image_width = 110
+        header_image_height = 36
+        pdf.drawImage(header_image_path, 70, page_height - 64,
+                      width=header_image_width, height=header_image_height)
+    except Exception as e:
+        print(f"Error loading header image: {e}")
+
+    # Footer (lines are written bottom-up):
+    footer_text_column_1 = [
+        "Kauno g. 16-308, LT-03212 Vilnius, Lietuva",
+        "Įm. k. 305594385 ",
+        "UAB „Claims management“"
+    ]
+
+    footer_text_column_2 = [
+        "www.claimsmanagement.lt",
+        "El. p.: paulius@claimsmanagement.lt",
+        "Tel.nr.: +370 6 877 63 30"
+    ]
+
+    pdf.setFont("Arial", 10)
+
+    x_col1 = 80
+    y_start = 50
+    line_height = 15
+
+    for i, text in enumerate(footer_text_column_1):
+        y_position = y_start + i * line_height
+        pdf.drawString(x_col1, y_position, text)
+
+    x_col2 = 360
+    for i, text in enumerate(footer_text_column_2):
+        y_position = y_start + i * line_height
+        pdf.drawString(x_col2, y_position, text)
+
+
 def paste_images_to_pdf_4x4(image_files, subfolder_path, num_of_images):
     global pdf
     image_count = 0
-    positions = [(100, 480), (350, 480), (100, 160), (350, 160)]  # Positions for up to 4 images
+    positions = [(80, 450), (330, 450), (80, 160), (330, 160)]  # Positions for up to 4 images
 
     for i, image_file in enumerate(image_files):
         image_path = os.path.join(subfolder_path, image_file)
@@ -117,7 +161,7 @@ def paste_images_to_pdf_4x4(image_files, subfolder_path, num_of_images):
                 img_width, img_height = img.size
 
                 max_width = 216
-                max_height = 288
+                max_height = 260
                 ratio = min(max_width / img_width, max_height / img_height)
                 new_size = (int(img_width * ratio), int(img_height * ratio))
 
@@ -166,47 +210,35 @@ def paste_images_to_pdf_1pic(image_files, subfolder_path):
             continue
 
 
-def add_header_footer():
-    global pdf
-    global header_image_path
-    page_width, page_height = A4
+def extract_images_from_pdf(pdf_path, output_folder):
+    pdf_document = fitz.open(pdf_path)
+    images = []
+    image_xrefs = set()
 
-    # Header:
-    try:
-        header_image_width = 110
-        header_image_height = 36
-        pdf.drawImage(header_image_path, 70, page_height - 64,
-                      width=header_image_width, height=header_image_height)
-    except Exception as e:
-        print(f"Error loading header image: {e}")
+    for page_num in range(len(pdf_document)):
+        page = pdf_document.load_page(page_num)
+        for img in page.get_images(full=True):
+            xref = img[0]  # The image reference (xref)
 
-    # Footer (lines are written bottom-up):
-    footer_text_column_1 = [
-        "Kauno g. 16-308, LT-03212 Vilnius, Lietuva",
-        "Įm. k. 305594385 ",
-        "UAB „Claims management“"
-    ]
+            # Check if this image has already been extracted
+            if xref in image_xrefs:
+                continue  # Skip this image since it's already processed
 
-    footer_text_column_2 = [
-        "www.claimsmanagement.lt",
-        "El. p.: paulius@claimsmanagement.lt",
-        "Tel.nr.: +370 6 877 63 30"
-    ]
+            image_xrefs.add(xref)  # Mark the xref as processed
+            base_image = pdf_document.extract_image(xref)
+            image_bytes = base_image["image"]
+            image_ext = base_image["ext"]
+            image_name = f"pdf_image_{page_num}_{xref}.{image_ext}"
 
-    pdf.setFont("Arial", 10)
+            # Save the extracted image temporarily to the output folder
+            image_path = os.path.join(output_folder, image_name)
+            with open(image_path, "wb") as f:
+                f.write(image_bytes)
 
-    x_col1 = 80
-    y_start = 50
-    line_height = 15
+            images.append(image_name)
 
-    for i, text in enumerate(footer_text_column_1):
-        y_position = y_start + i * line_height
-        pdf.drawString(x_col1, y_position, text)
-
-    x_col2 = 360
-    for i, text in enumerate(footer_text_column_2):
-        y_position = y_start + i * line_height
-        pdf.drawString(x_col2, y_position, text)
+    pdf_document.close()
+    return images
 
 
 def process_images():
@@ -246,7 +278,22 @@ def process_images():
             pdf.drawString(100, 740, f"{extract_folder_free_text(subfolder_name)}")
 
             image_files = [f for f in os.listdir(subfolder_path)
-                           if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.heic'))]
+                           if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.heic', '.pdf'))]
+
+            print(image_files)
+            print("-------------------")
+
+            # Extract images from PDFs if any
+            for image_file in image_files:
+                if image_file.lower().endswith('.pdf'):
+                    pdf_path = os.path.join(subfolder_path, image_file)
+                    extracted_images = extract_images_from_pdf(pdf_path, subfolder_path)
+                    image_files.extend(extracted_images)
+
+                # Remove the pdf files from the list after extracting images
+            image_files = [f for f in image_files if not f.lower().endswith('.pdf')]
+
+            print(image_files)
 
             if not image_files:
                 print(f"No images found in folder: {subfolder_name}")
