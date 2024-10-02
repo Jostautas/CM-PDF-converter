@@ -5,7 +5,6 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from PIL import Image
 import tkinter as tk
 from tkinter import filedialog
@@ -87,6 +86,69 @@ def select_input_file():
     add_text_to_pdf(pdf, document)
 
 
+def paste_images_to_pdf_4x4(image_files, subfolder_path):
+    image_count = 0
+    positions = [(100, 480), (350, 480), (100, 160), (350, 160)]  # Positions for up to 4 images
+
+    for i, image_file in enumerate(image_files):
+        image_path = os.path.join(subfolder_path, image_file)
+
+        try:
+            with Image.open(image_path) as img:
+                img = img.convert("RGB")
+                img_width, img_height = img.size
+
+                max_width = 3 * inch
+                max_height = 4 * inch
+                ratio = min(max_width / img_width, max_height / img_height)
+                new_size = (int(img_width * ratio), int(img_height * ratio))
+
+                # Use the in-memory ImageReader to embed the image directly
+                img_buffer = ImageReader(img)
+
+                x_pos, y_pos = positions[image_count % 4]
+                pdf.drawImage(img_buffer, x_pos, y_pos, width=new_size[0], height=new_size[1])
+
+        except Exception as e:
+            print(f"Error processing image {image_file}: {e}")
+            continue
+
+        image_count += 1
+
+        # After 4 images, add a new page
+        if image_count % 4 == 0:
+            pdf.showPage()
+
+
+def paste_images_to_pdf_1pic(image_files, subfolder_path):
+    position = (100, 160)
+
+    for i, image_file in enumerate(image_files):
+        image_path = os.path.join(subfolder_path, image_file)
+
+        try:
+            with Image.open(image_path) as img:
+                img = img.convert("RGB")
+                img_width, img_height = img.size
+
+                max_width = 6 * inch
+                max_height = 8 * inch
+                ratio = min(max_width / img_width, max_height / img_height)
+                new_size = (int(img_width * ratio), int(img_height * ratio))
+
+                # Use the in-memory ImageReader to embed the image directly
+                img_buffer = ImageReader(img)
+
+                x_pos, y_pos = position
+                pdf.drawImage(img_buffer, x_pos, y_pos, width=new_size[0], height=new_size[1])
+
+        except Exception as e:
+            print(f"Error processing image {image_file}: {e}")
+            continue
+
+        pdf.showPage()
+
+
 def process_images():
     global pdf
 
@@ -108,7 +170,7 @@ def process_images():
 
             # Draw the folder name in the PDF
             pdf.setFont("Helvetica-Bold", 14)
-            pdf.drawString(100, 800, f"Folder: {subfolder_name}")
+            pdf.drawString(100, 800, f"{subfolder_name}")
 
             image_files = [f for f in os.listdir(subfolder_path)
                            if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.heic'))]
@@ -117,40 +179,13 @@ def process_images():
                 print(f"No images found in folder: {subfolder_name}")
                 continue
 
-            image_count = 0
-            positions = [(100, 480), (350, 480), (100, 160), (350, 160)]  # Positions for up to 4 images
+            num_of_images = len(image_files)
 
-            for i, image_file in enumerate(image_files):
-                image_path = os.path.join(subfolder_path, image_file)
+            if num_of_images > 1:
+                paste_images_to_pdf_4x4(image_files, subfolder_path)
+            elif num_of_images == 1:
+                paste_images_to_pdf_1pic(image_files, subfolder_path)
 
-                try:
-                    # Open the image file using Pillow
-                    with Image.open(image_path) as img:
-                        img = img.convert("RGB")
-                        img_width, img_height = img.size
-
-                        # Resize the image to fit within the page layout (max width = 2.5 inches)
-                        max_width = 3 * inch
-                        max_height = 4 * inch
-                        ratio = min(max_width / img_width, max_height / img_height)
-                        new_size = (int(img_width * ratio), int(img_height * ratio))
-
-                        # Use the in-memory ImageReader to embed the image directly
-                        img_buffer = ImageReader(img)
-
-                        # Draw image on the PDF at the calculated position
-                        x_pos, y_pos = positions[image_count % 4]
-                        pdf.drawImage(img_buffer, x_pos, y_pos, width=new_size[0], height=new_size[1])
-
-                except Exception as e:
-                    print(f"Error processing image {image_file}: {e}")
-                    continue
-
-                image_count += 1
-
-                # After 4 images, add a new page
-                if image_count % 4 == 0:
-                    pdf.showPage()
 
     # Hide the loading label when the process is done
     loading_label.config(text="Images processed successfully!")
