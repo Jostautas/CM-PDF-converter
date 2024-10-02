@@ -180,17 +180,17 @@ def add_header_footer():
     except Exception as e:
         print(f"Error loading header image: {e}")
 
-    # Footer:
+    # Footer (lines are written bottom-up):
     footer_text_column_1 = [
-        "UAB „Claims management“",
+        "Kauno g. 16-308, LT-03212 Vilnius, Lietuva",
         "Įm. k. 305594385 ",
-        "Kauno g. 16-308, LT-03212 Vilnius, Lietuva"
+        "UAB „Claims management“"
     ]
 
     footer_text_column_2 = [
-        "Tel.nr.: +370 6 877 63 30",
+        "www.claimsmanagement.lt",
         "El. p.: paulius@claimsmanagement.lt",
-        "www.claimsmanagement.lt"
+        "Tel.nr.: +370 6 877 63 30"
     ]
 
     pdf.setFont("Arial", 10)
@@ -296,7 +296,7 @@ if __name__ == '__main__':
     register_fonts()
 
     btn_select_output_folder = tk.Button(root, text="Select PDF output folder", command=select_output_folder)
-    btn_select_docx = tk.Button(root, text="Select Word Document", command=lambda: select_input_file())
+    btn_select_docx = tk.Button(root, text="Select Word Document", command=select_input_file)
     btn_select_image_folder = tk.Button(root, text="Select Image Folder", command=select_image_folder)
     btn_generate_pdf = tk.Button(root, text="Generate PDF", command=save_pdf)
 
