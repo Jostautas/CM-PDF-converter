@@ -153,34 +153,33 @@ def add_header_footer():
     global output_doc
     global header_image_path
 
-    # Access the first section of the document (you can have multiple sections)
-    section = output_doc.sections[0]
+    for section in output_doc.sections:
 
-    header = section.header
-    header_para = header.add_paragraph()
+        header = section.header
+        header_para = header.add_paragraph()
 
-    try:
-        header_para.add_run().add_picture(header_image_path, width=Pt(100))
-    except Exception as e:
-        print(f"Error loading header image: {e}")
+        try:
+            header_para.add_run().add_picture(header_image_path, width=Pt(100))
+        except Exception as e:
+            print(f"Error loading header image: {e}")
 
-    footer = section.footer
-    footer_table = footer.add_table(rows=1, cols=2, width=Pt(500))  # Create a table with 1 row and 2 columns
+        footer = section.footer
+        footer_table = footer.add_table(rows=1, cols=2, width=Pt(500))  # Create a table with 1 row and 2 columns
 
-    remove_table_borders(footer_table)
+        remove_table_borders(footer_table)
 
-    footer_table.columns[0].width = Pt(250)
-    footer_table.columns[1].width = Pt(250)
+        footer_table.columns[0].width = Pt(250)
+        footer_table.columns[1].width = Pt(250)
 
-    cell_1 = footer_table.cell(0, 0)
-    cell_1.text = "Kauno g. 16-308, LT-03212 Vilnius, Lietuva\n" \
-                  "Įm. k. 305594385 \n" \
-                  "UAB „Claims management“"
+        cell_1 = footer_table.cell(0, 0)
+        cell_1.text = "Kauno g. 16-308, LT-03212 Vilnius, Lietuva\n" \
+                      "Įm. k. 305594385 \n" \
+                      "UAB „Claims management“"
 
-    cell_2 = footer_table.cell(0, 1)
-    cell_2.text = "www.claimsmanagement.lt\n" \
-                  "El. p.: paulius@claimsmanagement.lt\n" \
-                  "Tel.nr.: +370 6 877 63 30"
+        cell_2 = footer_table.cell(0, 1)
+        cell_2.text = "www.claimsmanagement.lt\n" \
+                      "El. p.: paulius@claimsmanagement.lt\n" \
+                      "Tel.nr.: +370 6 877 63 30"
 
 
 def paste_images_to_pdf_4x4(image_files, subfolder_path, num_of_images):
@@ -402,7 +401,7 @@ if __name__ == '__main__':
     docx_file_label.pack(pady=2)
     btn_select_image_folder.pack(pady=10)
     loading_label.pack(pady=2)
-    btn_generate_pdf.pack(pady=2)#.forget()
-    save_status_label.pack(pady=2)#.forget()
+    btn_generate_pdf.pack(pady=2)#btn_generate_pdf.forget()
+    save_status_label.pack(pady=2)#save_status_label.forget()
 
     root.mainloop()
