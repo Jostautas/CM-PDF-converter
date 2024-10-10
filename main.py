@@ -2,6 +2,9 @@ import os
 import threading
 import re
 from docx import Document
+from docx.shared import Pt
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
@@ -12,9 +15,10 @@ import tkinter as tk
 from tkinter import filedialog
 import fitz
 
-output_file_name = "pretenzija.pdf"
+output_file_name = "pretenzija.docx"
 output_file_path = f"C:/Users/josta/Downloads/{output_file_name}"
 pdf = None
+output_doc = Document()
 header_image_path = "CM_logo.png"
 page_bottom_limit = 100
 
@@ -94,8 +98,32 @@ def add_text_to_pdf(document):
             text_y_position = 750
 
 
+def add_text_to_docx(input_doc):
+    global output_doc
+
+    for para in input_doc.paragraphs:
+        new_para = output_doc.add_paragraph()
+
+        new_para.style = para.style
+
+        for run in para.runs:
+            new_run = new_para.add_run(run.text)
+
+            new_run.bold = run.bold
+            new_run.italic = run.italic
+            new_run.underline = run.underline
+
+            if run.font.size:
+                new_run.font.size = run.font.size
+
+            if run.font.name:
+                new_run.font.name = run.font.name
+
+        if para.alignment is not None:
+            new_para.alignment = para.alignment
+
+
 def select_input_file():
-    global pdf
     global output_file_path
     file_path = filedialog.askopenfilename()
 
@@ -107,52 +135,52 @@ def select_input_file():
     docx_file_label.config(text="Word document selected")
     loading_label.update_idletasks()
 
-    document = Document(file_path)
-    pdf = canvas.Canvas(output_file_path, pagesize=A4)
-    add_text_to_pdf(document)
+    input_document = Document(file_path)
+    add_text_to_docx(input_document)
+
+
+def remove_table_borders(table):
+    tbl = table._element
+    tblBorders = OxmlElement('w:tblBorders')
+    for border_name in ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']:
+        border = OxmlElement(f'w:{border_name}')
+        border.set(qn('w:val'), 'none')
+        tblBorders.append(border)
+    tbl.tblPr.append(tblBorders)
 
 
 def add_header_footer():
-    global pdf
+    global output_doc
     global header_image_path
-    page_width, page_height = A4
 
-    # Header:
+    # Access the first section of the document (you can have multiple sections)
+    section = output_doc.sections[0]
+
+    header = section.header
+    header_para = header.add_paragraph()
+
     try:
-        header_image_width = 110
-        header_image_height = 36
-        pdf.drawImage(header_image_path, 70, page_height - 64,
-                      width=header_image_width, height=header_image_height)
+        header_para.add_run().add_picture(header_image_path, width=Pt(100))
     except Exception as e:
         print(f"Error loading header image: {e}")
 
-    # Footer (lines are written bottom-up):
-    footer_text_column_1 = [
-        "Kauno g. 16-308, LT-03212 Vilnius, Lietuva",
-        "Įm. k. 305594385 ",
-        "UAB „Claims management“"
-    ]
+    footer = section.footer
+    footer_table = footer.add_table(rows=1, cols=2, width=Pt(500))  # Create a table with 1 row and 2 columns
 
-    footer_text_column_2 = [
-        "www.claimsmanagement.lt",
-        "El. p.: paulius@claimsmanagement.lt",
-        "Tel.nr.: +370 6 877 63 30"
-    ]
+    remove_table_borders(footer_table)
 
-    pdf.setFont("Arial", 10)
+    footer_table.columns[0].width = Pt(250)
+    footer_table.columns[1].width = Pt(250)
 
-    x_col1 = 80
-    y_start = 50
-    line_height = 15
+    cell_1 = footer_table.cell(0, 0)
+    cell_1.text = "Kauno g. 16-308, LT-03212 Vilnius, Lietuva\n" \
+                  "Įm. k. 305594385 \n" \
+                  "UAB „Claims management“"
 
-    for i, text in enumerate(footer_text_column_1):
-        y_position = y_start + i * line_height
-        pdf.drawString(x_col1, y_position, text)
-
-    x_col2 = 360
-    for i, text in enumerate(footer_text_column_2):
-        y_position = y_start + i * line_height
-        pdf.drawString(x_col2, y_position, text)
+    cell_2 = footer_table.cell(0, 1)
+    cell_2.text = "www.claimsmanagement.lt\n" \
+                  "El. p.: paulius@claimsmanagement.lt\n" \
+                  "Tel.nr.: +370 6 877 63 30"
 
 
 def paste_images_to_pdf_4x4(image_files, subfolder_path, num_of_images):
@@ -333,6 +361,13 @@ def select_output_folder():
         output_folder_label.config(text="Error selecting output folder")
         loading_label.update_idletasks()
 
+def save_word():
+    global output_file_path
+
+    add_header_footer()
+    output_doc.save(output_file_path)
+    save_status_label.config(text="PDF saved")
+    loading_label.update_idletasks()
 
 def save_pdf():
     global pdf
@@ -351,10 +386,10 @@ if __name__ == '__main__':
 
     register_fonts()
 
-    btn_select_output_folder = tk.Button(root, text="Select PDF output folder", command=select_output_folder)
-    btn_select_docx = tk.Button(root, text="Select Word Document", command=select_input_file)
+    btn_select_output_folder = tk.Button(root, text="Select PDF Output Folder", command=select_output_folder)
+    btn_select_docx = tk.Button(root, text="Select Input Word Document", command=select_input_file)
     btn_select_image_folder = tk.Button(root, text="Select Image Folder", command=select_image_folder)
-    btn_generate_pdf = tk.Button(root, text="Generate PDF", command=save_pdf)
+    btn_generate_pdf = tk.Button(root, text=f"Generate {output_file_name}", command=save_word)
 
     output_folder_label = tk.Label(root, text="")
     docx_file_label = tk.Label(root, text="")
@@ -367,7 +402,7 @@ if __name__ == '__main__':
     docx_file_label.pack(pady=2)
     btn_select_image_folder.pack(pady=10)
     loading_label.pack(pady=2)
-    btn_generate_pdf.forget()
-    save_status_label.forget()
+    btn_generate_pdf.pack(pady=2)#.forget()
+    save_status_label.pack(pady=2)#.forget()
 
     root.mainloop()
