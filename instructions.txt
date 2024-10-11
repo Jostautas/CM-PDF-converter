@@ -1,0 +1,11 @@
+Reikia paspausti mygtukus nuo virsaus i apacia. Pazymetu (optional) galima nespausti.
+
+"Select output folder" - folderis, kur atsiras sugeneruotas docx failas.
+
+"Select word document" - pradinis docx failas, kurio turini bus galima redaguot sugeneruotame faile.
+
+"Select image folder" - folderis, kuriame yra pagal eile uzvardinti sub-folderiai. Juose galima ideti nuotraukas ir pdf failus, is kuriu bus automatiskai istraukiamos nuotraukos. sub-folderiu uzvardinimas - "numeris pavadinimas", pvz "1 eismo ivikio deklaracija"
+
+"Select PDF folder to copy-paste from" - folderis, kuriame esancius pdf failus ides kaip nuotraukas i sugeneruota docx faila.
+
+"Generate filename.docx" - sugeneruoti faila.
