@@ -1,6 +1,7 @@
 import os
 import threading
 import re
+import io
 from docx import Document
 from docx.shared import Pt
 from docx.oxml import OxmlElement
@@ -17,7 +18,6 @@ import fitz
 
 output_file_name = "pretenzija.docx"
 output_file_path = f"C:/Users/josta/Downloads/{output_file_name}"
-pdf = None
 output_doc = Document()
 header_image_path = "CM_logo.png"
 page_bottom_limit = 100
@@ -181,27 +181,23 @@ def paste_images_to_word_2x2(image_files, subfolder_path, num_of_images):
             table = output_doc.add_table(rows=2, cols=2)
 
 
-def paste_images_to_word_1pic(image_files, subfolder_path):
+def paste_images_to_word_1pic(image_path):
     global output_doc
 
-    for image_file in image_files:
-        image_path = os.path.join(subfolder_path, image_file)
+    try:
+        img = Image.open(image_path)
+        img = img.convert("RGB")
+        img_width, img_height = img.size
 
-        try:
-            img = Image.open(image_path)
-            img = img.convert("RGB")
-            img_width, img_height = img.size
+        max_width = 400
+        max_height = 540
+        ratio = min(max_width / img_width, max_height / img_height)
+        new_size = (int(img_width * ratio), int(img_height * ratio))
 
-            max_width = 400
-            max_height = 520
-            ratio = min(max_width / img_width, max_height / img_height)
-            new_size = (int(img_width * ratio), int(img_height * ratio))
+        output_doc.add_picture(image_path, width=Pt(new_size[0]))
 
-            output_doc.add_picture(image_path, width=Pt(new_size[0]))
-
-        except Exception as e:
-            print(f"Error processing image {image_file}: {e}")
-            continue
+    except Exception as e:
+        print(f"Error processing image {image_path}: {e}")
 
 
 def process_images():
@@ -243,12 +239,10 @@ def process_images():
                     extracted_images = extract_images_from_pdf(pdf_path, subfolder_path)
                     image_files.extend(extracted_images)
 
-            print(image_files)
             # Remove the pdf files from the list after extracting images
             image_files = [f for f in image_files if not f.lower().endswith('.pdf')]
             # Remove duplicates from the list
             image_files = list(dict.fromkeys(image_files))
-            print(image_files)
 
             if not image_files:
                 print(f"No images found in folder: {subfolder_name}")
@@ -259,7 +253,7 @@ def process_images():
             if num_of_images > 1:
                 paste_images_to_word_2x2(image_files, subfolder_path, num_of_images)
             elif num_of_images == 1:
-                paste_images_to_word_1pic(image_files, subfolder_path)
+                paste_images_to_word_1pic(os.path.join(subfolder_path, image_files[0]))
 
     btn_generate_pdf.pack(pady=0)
     save_status_label.pack(pady=2)
@@ -288,12 +282,50 @@ def select_output_folder():
         loading_label.update_idletasks()
 
 
+def select_pdf_folder():
+    # folder_path = filedialog.askdirectory()
+    # if not folder_path:
+    #     loading_label.config(text="No folder selected!")
+    #     return
+    pdf_path = "C:/Users/josta/Downloads/Naudingos_nuorodos_IDV_VL.pdf"
+    pdf_document = fitz.open(pdf_path)
+    print(len(pdf_document))
+
+    for page_num in range(len(pdf_document)):
+        page = pdf_document.load_page(page_num)
+        pix = page.get_pixmap(dpi=150)
+
+        # Convert Pixmap to PIL Image
+        mode = "RGB" if pix.alpha == 0 else "RGBA"  # Handle alpha channel if it exists
+        img = Image.frombytes(mode, (pix.width, pix.height), pix.samples)
+
+        image_stream = io.BytesIO()
+        img.save(image_stream, format="PNG")
+        image_stream.seek(0)
+
+        image_path = f"pdf page {page_num + 1}.png"
+        img.save(image_path)  # For verification or fallback purposes
+
+        # Add a page break in the Word document if not the first page
+        if page_num > 0:
+            output_doc.add_page_break()
+
+        try:
+            paste_images_to_word_1pic(image_path)
+        except Exception as e:
+            print(f"Error adding PDF page {page_num + 1} from file {pdf_path} to output_doc: {e}")
+            continue
+
+    pdf_document.close()
+    return
+
+
 def save_word():
     global output_file_path
 
     add_header_footer()
     output_doc.save(output_file_path)
-    save_status_label.config(text="PDF saved")
+    save_status_label.config(text="Word document saved")
     loading_label.update_idletasks()
 
 
@@ -303,9 +335,10 @@ if __name__ == '__main__':
 
     # register_fonts()
 
-    btn_select_output_folder = tk.Button(root, text="Select Output Folder", command=select_output_folder)
-    btn_select_docx = tk.Button(root, text="Select Input Word Document", command=select_input_file)
-    btn_select_image_folder = tk.Button(root, text="Select Input Image Folder", command=select_image_folder)
+    btn_select_output_folder = tk.Button(root, text="Select output folder", command=select_output_folder)
+    btn_select_docx = tk.Button(root, text="Select word document", command=select_input_file)
+    btn_select_image_folder = tk.Button(root, text="Select image folder (optional)", command=select_image_folder)
+    btn_select_pdf_folder = tk.Button(root, text="Select PDF folder to copy-paste from (optional)", command=select_pdf_folder)
     btn_generate_pdf = tk.Button(root, text=f"Generate {output_file_name}", command=save_word)
 
     output_folder_label = tk.Label(root, text="")
@@ -319,7 +352,9 @@ if __name__ == '__main__':
     docx_file_label.pack(pady=2)
     btn_select_image_folder.pack(pady=10)
     loading_label.pack(pady=2)
-    btn_generate_pdf.forget()
-    save_status_label.forget()
+    btn_select_pdf_folder.pack(pady=10)
+    #label for pdf select
+    btn_generate_pdf.pack(pady=2)
+    save_status_label.pack(pady=2)
 
     root.mainloop()
