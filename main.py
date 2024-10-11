@@ -283,41 +283,46 @@ def select_output_folder():
 
 
 def select_pdf_folder():
-    # folder_path = filedialog.askdirectory()
-    # if not folder_path:
-    #     loading_label.config(text="No folder selected!")
-    #     return
-    pdf_path = "C:/Users/josta/Downloads/Naudingos_nuorodos_IDV_VL.pdf"
-    pdf_document = fitz.open(pdf_path)
-    print(len(pdf_document))
+    folder_path = filedialog.askdirectory()
+    if not folder_path:
+        select_pdf_folder_label.config(text="No folder selected!")
+        return
 
-    for page_num in range(len(pdf_document)):
-        page = pdf_document.load_page(page_num)
-        pix = page.get_pixmap(dpi=150)
+    select_pdf_folder_label.config(text="Folder selected")
 
-        # Convert Pixmap to PIL Image
-        mode = "RGB" if pix.alpha == 0 else "RGBA"  # Handle alpha channel if it exists
-        img = Image.frombytes(mode, (pix.width, pix.height), pix.samples)
+    for pdf_file in os.listdir(folder_path):
+        if pdf_file.lower().endswith('.pdf'):  # Ensure it's a PDF file
+            pdf_path = os.path.join(folder_path, pdf_file)
+            pdf_document = fitz.open(pdf_path)
 
-        image_stream = io.BytesIO()
-        img.save(image_stream, format="PNG")
-        image_stream.seek(0)
+            for page_num in range(len(pdf_document)):
+                page = pdf_document.load_page(page_num)
+                pix = page.get_pixmap(dpi=150)
 
-        image_path = f"pdf page {page_num + 1}.png"
-        img.save(image_path)  # For verification or fallback purposes
+                # Convert Pixmap to PIL Image
+                mode = "RGB" if pix.alpha == 0 else "RGBA"  # Handle alpha channel if it exists
+                img = Image.frombytes(mode, (pix.width, pix.height), pix.samples)
 
-        # Add a page break in the Word document if not the first page
-        if page_num > 0:
-            output_doc.add_page_break()
+                image_stream = io.BytesIO()
+                img.save(image_stream, format="PNG")
+                image_stream.seek(0)
 
-        try:
-            paste_images_to_word_1pic(image_path)
-        except Exception as e:
-            print(f"Error adding PDF page {page_num + 1} from file {pdf_path} to output_doc: {e}")
-            continue
+                image_path = f"pdf page {page_num + 1}.png"
+                img.save(image_path)  # For verification or fallback purposes
 
-    pdf_document.close()
-    return
+                # Add a page break in the Word document if not the first page
+                if page_num > 0:
+                    output_doc.add_page_break()
+
+                try:
+                    paste_images_to_word_1pic(image_path)
+                except Exception as e:
+                    print(f"Error adding PDF page {page_num + 1} from file {pdf_path} to output_doc: {e}")
+                    select_pdf_folder_label.config(text=f"{select_pdf_folder_label.cget("text")}\nError adding PDF page {page_num + 1} from file {pdf_path} to output_doc: {e}")
+                    continue
+
+                os.remove(image_path)
+            pdf_document.close()
 
 
 def save_word():
@@ -344,6 +349,7 @@ if __name__ == '__main__':
     output_folder_label = tk.Label(root, text="")
     docx_file_label = tk.Label(root, text="")
     loading_label = tk.Label(root, text="")
+    select_pdf_folder_label = tk.Label(root, text="")
     save_status_label = tk.Label(root, text="")
 
     btn_select_output_folder.pack(pady=10)
@@ -353,7 +359,7 @@ if __name__ == '__main__':
     btn_select_image_folder.pack(pady=10)
     loading_label.pack(pady=2)
     btn_select_pdf_folder.pack(pady=10)
-    #label for pdf select
+    select_pdf_folder_label.pack(pady=2)
     btn_generate_pdf.pack(pady=2)
     save_status_label.pack(pady=2)
 
