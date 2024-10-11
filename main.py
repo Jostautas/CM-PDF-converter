@@ -17,10 +17,10 @@ from tkinter import filedialog
 import fitz
 
 output_file_name = "pretenzija.docx"
-output_file_path = f"C:/Users/josta/Downloads/{output_file_name}"
 output_doc = Document()
 header_image_path = "CM_logo.png"
 page_bottom_limit = 100
+output_file_path = ""
 
 
 def register_fonts():
@@ -93,7 +93,8 @@ def add_header_footer():
         try:
             header_para.add_run().add_picture(header_image_path, width=Pt(100))
         except Exception as e:
-            print(f"Error loading header image: {e}")
+            other_error_messages_label.config(
+                text=f"{other_error_messages_label.cget("text")}\nError loading header image: {e}")
 
         footer = section.footer
         footer_table = footer.add_table(rows=1, cols=2, width=Pt(500))  # Create a table with 1 row and 2 columns
@@ -171,7 +172,8 @@ def paste_images_to_word_2x2(image_files, subfolder_path, num_of_images):
             cell_paragraph.add_run().add_picture(image_path, width=Pt(new_size[0]))
 
         except Exception as e:
-            print(f"Error processing image {image_file}, num_of_images={num_of_images}: {e}")
+            loading_label.config(
+                text=f"{loading_label.cget("text")}\nError processing image {image_file}, num_of_images={num_of_images}: {e}")
             continue
 
         image_count += 1
@@ -197,7 +199,8 @@ def paste_images_to_word_1pic(image_path):
         output_doc.add_picture(image_path, width=Pt(new_size[0]))
 
     except Exception as e:
-        print(f"Error processing image {image_path}: {e}")
+        loading_label.config(
+            text=f"{loading_label.cget("text")}\nError processing image {image_path}: {e}")
 
 
 def process_images():
@@ -291,7 +294,7 @@ def select_pdf_folder():
     select_pdf_folder_label.config(text="Folder selected")
 
     for pdf_file in os.listdir(folder_path):
-        if pdf_file.lower().endswith('.pdf'):  # Ensure it's a PDF file
+        if pdf_file.lower().endswith('.pdf'):
             pdf_path = os.path.join(folder_path, pdf_file)
             pdf_document = fitz.open(pdf_path)
 
@@ -310,14 +313,12 @@ def select_pdf_folder():
                 image_path = f"pdf page {page_num + 1}.png"
                 img.save(image_path)  # For verification or fallback purposes
 
-                # Add a page break in the Word document if not the first page
                 if page_num > 0:
                     output_doc.add_page_break()
 
                 try:
                     paste_images_to_word_1pic(image_path)
                 except Exception as e:
-                    print(f"Error adding PDF page {page_num + 1} from file {pdf_path} to output_doc: {e}")
                     select_pdf_folder_label.config(text=f"{select_pdf_folder_label.cget("text")}\nError adding PDF page {page_num + 1} from file {pdf_path} to output_doc: {e}")
                     continue
 
@@ -343,7 +344,8 @@ if __name__ == '__main__':
     btn_select_output_folder = tk.Button(root, text="Select output folder", command=select_output_folder)
     btn_select_docx = tk.Button(root, text="Select word document", command=select_input_file)
     btn_select_image_folder = tk.Button(root, text="Select image folder (optional)", command=select_image_folder)
-    btn_select_pdf_folder = tk.Button(root, text="Select PDF folder to copy-paste from (optional)", command=select_pdf_folder)
+    btn_select_pdf_folder = tk.Button(
+                                root, text="Select PDF folder to copy-paste from (optional)", command=select_pdf_folder)
     btn_generate_pdf = tk.Button(root, text=f"Generate {output_file_name}", command=save_word)
 
     output_folder_label = tk.Label(root, text="")
@@ -351,6 +353,7 @@ if __name__ == '__main__':
     loading_label = tk.Label(root, text="")
     select_pdf_folder_label = tk.Label(root, text="")
     save_status_label = tk.Label(root, text="")
+    other_error_messages_label = tk.Label(root, text="")
 
     btn_select_output_folder.pack(pady=10)
     output_folder_label.pack(pady=0)
@@ -362,5 +365,6 @@ if __name__ == '__main__':
     select_pdf_folder_label.pack(pady=2)
     btn_generate_pdf.pack(pady=2)
     save_status_label.pack(pady=2)
+    other_error_messages_label.pack(pady=2)
 
     root.mainloop()
