@@ -132,7 +132,7 @@ def extract_images_from_pdf(pdf_path, output_folder):
             base_image = pdf_document.extract_image(xref)
             image_bytes = base_image["image"]
             image_ext = base_image["ext"]
-            image_name = f"pdf_image_{page_num}_{xref}.{image_ext}"
+            image_name = f"pdf_image {page_num} {xref}.{image_ext}"
 
             # Save the extracted image temporarily to the output folder
             image_path = os.path.join(output_folder, image_name)
@@ -243,8 +243,12 @@ def process_images():
                     extracted_images = extract_images_from_pdf(pdf_path, subfolder_path)
                     image_files.extend(extracted_images)
 
+            print(image_files)
             # Remove the pdf files from the list after extracting images
             image_files = [f for f in image_files if not f.lower().endswith('.pdf')]
+            # Remove duplicates from the list
+            image_files = list(dict.fromkeys(image_files))
+            print(image_files)
 
             if not image_files:
                 print(f"No images found in folder: {subfolder_name}")
