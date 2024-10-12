@@ -1,11 +1,24 @@
 # my_app.spec
+
+import sys
+from os import path
+site_packages = next(p for p in sys.path if 'site-packages' in p)
+
 block_cipher = None
 
 a = Analysis(
     ['main.py'],
     pathex=['.'],
     binaries=[],
-    datas=[('CM_logo.png', '.')],
+    datas=[('CM_logo.png', '.'),
+        (path.join(site_packages,"docx","parts"), 
+                "docx/parts"),
+        (path.join(site_packages,"docx","templates"), 
+                "docx/templates"),
+        (path.join(site_packages,"reportlab"), 
+                "reportlab"),
+        (path.join(site_packages, "pymupdf"),
+                "pymupdf")],
     hiddenimports=['docx'],
     hookspath=[],
     hooksconfig={},

@@ -6,9 +6,6 @@ from docx import Document
 from docx.shared import Pt
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
-from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase import pdfmetrics
 from PIL import Image
@@ -18,7 +15,7 @@ import fitz
 
 output_file_name = "pretenzija.docx"
 output_doc = Document()
-header_image_path = "CM_logo.png"
+header_image_path = "_internal/CM_logo.png"
 page_bottom_limit = 100
 output_file_path = ""
 
