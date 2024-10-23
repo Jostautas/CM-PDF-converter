@@ -3,6 +3,7 @@ import threading
 import re
 import io
 from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Pt
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
@@ -16,6 +17,8 @@ import fitz
 output_file_name = "pretenzija.docx"
 output_doc = Document()
 header_image_path = "_internal/CM_logo.png"
+# uncomment for local development:
+# header_image_path = "CM_logo.png"
 page_bottom_limit = 100
 output_file_path = ""
 
@@ -189,7 +192,7 @@ def paste_images_to_word_1pic(image_path):
         img_width, img_height = img.size
 
         max_width = 400
-        max_height = 540
+        max_height = 520
         ratio = min(max_width / img_width, max_height / img_height)
         new_size = (int(img_width * ratio), int(img_height * ratio))
 
@@ -226,20 +229,20 @@ def process_images():
         subfolder_path = os.path.join(folder_path, subfolder_name)
 
         if os.path.isdir(subfolder_path):
-            # Add a new section or page for each subfolder
-            output_doc.add_paragraph(f"{extract_folder_free_text(subfolder_name)}", style='Heading 1')
+            picture_folder_title = output_doc.add_paragraph(f"{extract_folder_free_text(subfolder_name)}", style='Heading 1')
+            picture_folder_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            picture_folder_title_format = picture_folder_title.paragraph_format
+            picture_folder_title_format.space_after = Pt(12)
 
             image_files = [f for f in os.listdir(subfolder_path)
                            if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.heic', '.pdf'))]
 
-            # Extract images from PDFs if any
             for image_file in image_files:
                 if image_file.lower().endswith('.pdf'):
                     pdf_path = os.path.join(subfolder_path, image_file)
                     extracted_images = extract_images_from_pdf(pdf_path, subfolder_path)
                     image_files.extend(extracted_images)
 
-            # Remove the pdf files from the list after extracting images
             image_files = [f for f in image_files if not f.lower().endswith('.pdf')]
             # Remove duplicates from the list
             image_files = list(dict.fromkeys(image_files))
@@ -294,6 +297,11 @@ def select_pdf_folder():
         if pdf_file.lower().endswith('.pdf'):
             pdf_path = os.path.join(folder_path, pdf_file)
             pdf_document = fitz.open(pdf_path)
+
+            pdf_file_title = output_doc.add_paragraph(f"{pdf_file.title()}", style='Heading 1')
+            pdf_file_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            pdf_file_title_format = pdf_file_title.paragraph_format
+            pdf_file_title_format.space_after = Pt(12)
 
             for page_num in range(len(pdf_document)):
                 page = pdf_document.load_page(page_num)
