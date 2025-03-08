@@ -5,6 +5,7 @@ import io
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Pt
+from docx.shared import RGBColor
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from PIL import Image
@@ -14,9 +15,9 @@ import fitz
 
 output_file_name = "pretenzija.docx"
 output_doc = Document()
-header_image_path = "_internal/CM_logo.png"
+# header_image_path = "_internal/CM_logo.png"
 # uncomment for local development:
-# header_image_path = "CM_logo.png"
+header_image_path = "CM_logo.png"
 page_bottom_limit = 100
 output_file_path = ""
 
@@ -269,6 +270,9 @@ def process_images():
             picture_folder_title_format = picture_folder_title.paragraph_format
             picture_folder_title_format.space_after = Pt(12)
 
+            for run in picture_folder_title.runs:
+                run.font.color.rgb = RGBColor(0, 0, 0)
+
             image_files = [f for f in os.listdir(subfolder_path)
                            if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.heic', '.pdf'))]
 
@@ -337,6 +341,9 @@ def select_pdf_folder():
             pdf_file_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
             pdf_file_title_format = pdf_file_title.paragraph_format
             pdf_file_title_format.space_after = Pt(12)
+
+            for run in pdf_file_title.runs:
+                run.font.color.rgb = RGBColor(0, 0, 0)
 
             for page_num in range(len(pdf_document)):
                 page = pdf_document.load_page(page_num)
