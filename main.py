@@ -6,11 +6,6 @@ from docx import Document
 from docx.shared import Pt
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
-from reportlab.lib.utils import ImageReader
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfbase import pdfmetrics
 from PIL import Image
 import tkinter as tk
 from tkinter import filedialog
@@ -21,13 +16,6 @@ output_doc = Document()
 header_image_path = "CM_logo.png"
 page_bottom_limit = 100
 output_file_path = ""
-
-
-def register_fonts():
-    pdfmetrics.registerFont(TTFont('Arial', 'Arial-Unicode-Regular.ttf'))
-    pdfmetrics.registerFont(TTFont('Arial-Bold', 'Arial-Unicode-Bold.ttf'))
-    pdfmetrics.registerFont(TTFont('Arial-Bold-Italic', 'Arial-Unicode-Bold-Italic.ttf'))
-    pdfmetrics.registerFont(TTFont('Arial-Italic', 'Arial-Unicode-Italic.ttf'))
 
 
 def add_text_to_docx(input_doc):
@@ -45,8 +33,10 @@ def add_text_to_docx(input_doc):
             new_run.italic = run.italic
             new_run.underline = run.underline
 
-            if run.font.size:
+            if run.font.size is not None:
                 new_run.font.size = run.font.size
+            elif para.style.font.size is not None:
+                new_run.font.size = para.style.font.size
 
             if run.font.name:
                 new_run.font.name = run.font.name
@@ -94,7 +84,7 @@ def add_header_footer():
             header_para.add_run().add_picture(header_image_path, width=Pt(100))
         except Exception as e:
             other_error_messages_label.config(
-                text=f"{other_error_messages_label.cget("text")}\nError loading header image: {e}")
+                text=f"{other_error_messages_label.cget('text')}\nError loading header image: {e}")
 
         footer = section.footer
         footer_table = footer.add_table(rows=1, cols=2, width=Pt(500))  # Create a table with 1 row and 2 columns
@@ -105,15 +95,57 @@ def add_header_footer():
         footer_table.columns[1].width = Pt(250)
 
         cell_1 = footer_table.cell(0, 0)
-        cell_1.text = "Kauno g. 16-308, LT-03212 Vilnius, Lietuva\n" \
-                      "Įm. k. 305594385 \n" \
-                      "UAB „Claims management“"
+        cell_1.text = "UAB „Claims management“\n" \
+                      "Įm. k. 305594385\n" \
+                      "Kauno g. 16-308, LT-03212 Vilnius, Lietuva"
+
+
 
         cell_2 = footer_table.cell(0, 1)
-        cell_2.text = "www.claimsmanagement.lt\n" \
+        cell_2.text = "Tel.nr.: +370 6 877 63 30\n" \
                       "El. p.: paulius@claimsmanagement.lt\n" \
-                      "Tel.nr.: +370 6 877 63 30"
+                      "www.claimsmanagement.lt"
 
+        for paragraph in cell_1.paragraphs:
+            paragraph.paragraph_format.line_spacing = Pt(10)
+            paragraph.paragraph_format.space_after = Pt(0)  # Remove extra space after lines
+
+            for run in paragraph.runs:
+                run.font.name = 'Poppins'
+                run.font.size = Pt(9)
+
+                # Ensure the font is properly set in XML
+                r = run._element
+                rPr = r.find(qn('w:rPr'))
+                if rPr is None:
+                    rPr = OxmlElement('w:rPr')
+                    r.append(rPr)
+                rFonts = rPr.find(qn('w:rFonts'))
+                if rFonts is None:
+                    rFonts = OxmlElement('w:rFonts')
+                    rPr.append(rFonts)
+                rFonts.set(qn('w:ascii'), 'Poppins')
+                rFonts.set(qn('w:hAnsi'), 'Poppins')
+
+        for paragraph in cell_2.paragraphs:
+            paragraph.paragraph_format.line_spacing = Pt(10)
+            paragraph.paragraph_format.space_after = Pt(0)  # Remove extra space after lines
+            for run in paragraph.runs:
+                run.font.name = 'Poppins'
+                run.font.size = Pt(9)
+
+                # Ensure the font is properly set in XML
+                r = run._element
+                rPr = r.find(qn('w:rPr'))
+                if rPr is None:
+                    rPr = OxmlElement('w:rPr')
+                    r.append(rPr)
+                rFonts = rPr.find(qn('w:rFonts'))
+                if rFonts is None:
+                    rFonts = OxmlElement('w:rFonts')
+                    rPr.append(rFonts)
+                rFonts.set(qn('w:ascii'), 'Poppins')
+                rFonts.set(qn('w:hAnsi'), 'Poppins')
 
 def extract_images_from_pdf(pdf_path, output_folder):
     pdf_document = fitz.open(pdf_path)
@@ -173,7 +205,7 @@ def paste_images_to_word_2x2(image_files, subfolder_path, num_of_images):
 
         except Exception as e:
             loading_label.config(
-                text=f"{loading_label.cget("text")}\nError processing image {image_file}, num_of_images={num_of_images}: {e}")
+                text=f"{loading_label.cget('text')}\nError processing image {image_file}, num_of_images={num_of_images}: {e}")
             continue
 
         image_count += 1
@@ -200,7 +232,7 @@ def paste_images_to_word_1pic(image_path):
 
     except Exception as e:
         loading_label.config(
-            text=f"{loading_label.cget("text")}\nError processing image {image_path}: {e}")
+            text=f"{loading_label.cget('text')}\nError processing image {image_path}: {e}")
 
 
 def process_images():
@@ -319,7 +351,7 @@ def select_pdf_folder():
                 try:
                     paste_images_to_word_1pic(image_path)
                 except Exception as e:
-                    select_pdf_folder_label.config(text=f"{select_pdf_folder_label.cget("text")}\nError adding PDF page {page_num + 1} from file {pdf_path} to output_doc: {e}")
+                    select_pdf_folder_label.config(text=f"{select_pdf_folder_label.cget('text')}\nError adding PDF page {page_num + 1} from file {pdf_path} to output_doc: {e}")
                     continue
 
                 os.remove(image_path)
@@ -338,8 +370,6 @@ def save_word():
 if __name__ == '__main__':
     root = tk.Tk()
     root.title("CM PDF Converter")
-
-    # register_fonts()
 
     btn_select_output_folder = tk.Button(root, text="Select output folder", command=select_output_folder)
     btn_select_docx = tk.Button(root, text="Select word document", command=select_input_file)
